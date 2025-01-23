@@ -306,6 +306,9 @@ class _EditProfileState extends State<EditProfile> {
               ),
               const SizedBox(height: 20.0),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                ),
                 onPressed: () {
                   setState(() {
                     projects.add(Project(
@@ -380,6 +383,9 @@ class _EditProfileState extends State<EditProfile> {
               ),
               const SizedBox(height: 20.0),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                ),
                 onPressed: () {
                   setState(() {
                     courses.add(Course(
