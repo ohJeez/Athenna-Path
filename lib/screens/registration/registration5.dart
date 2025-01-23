@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../firebase/company_service.dart';
+import '../../services/company_service.dart';
 import '../login/login2.dart';
 
 class PasswordRegistrationPage extends StatefulWidget {
@@ -162,8 +162,11 @@ class _PasswordRegistrationPageState extends State<PasswordRegistrationPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
+        print('\n=== Completing Registration ===');
+        print('Email: ${widget.companyData['email']}');
+
         await _companyService.registerCompany(
-          email: widget.companyData['email']!.trim(),
+          email: widget.companyData['email']!,
           password: _passwordController.text,
           companyName: widget.companyData['companyName']!,
           foundedYear: widget.companyData['foundedYear']!,
@@ -171,34 +174,34 @@ class _PasswordRegistrationPageState extends State<PasswordRegistrationPage> {
           companyType: widget.companyData['companyType']!,
         );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Registration successful! Please check your email for verification.'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 5),
-            ),
-          );
+        print('Registration successful!');
+        print('Company Name: ${widget.companyData['companyName']}');
 
-          // Navigate to login page after successful registration
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const CompanyLoginPage()),
-            (route) => false,
-          );
-        }
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Please login.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate to login page
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const CompanyLoginPage()),
+          (route) => false,
+        );
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString()),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-            ),
-          );
-          print('Registration Error: $e'); // Debug print
-        }
+        print('Registration Error: $e');
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
       setState(() => _isLoading = false);
     }

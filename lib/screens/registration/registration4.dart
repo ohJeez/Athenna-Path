@@ -1,7 +1,7 @@
 import 'package:final_project/screens/login/login2.dart';
 import 'package:final_project/screens/registration/registration5.dart';
 import 'package:flutter/material.dart';
-import '../../firebase/company_service.dart';
+import '../../services/company_service.dart';
 
 class CompanyRegistrationPage extends StatefulWidget {
   const CompanyRegistrationPage({super.key});
@@ -26,24 +26,32 @@ class _CompanyRegistrationPageState extends State<CompanyRegistrationPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        // Navigate to password page and pass the company data
+        print('\n=== Starting Company Registration ===');
+        print('Company Name: ${_companyNameController.text}');
+        print('Email: ${_emailController.text}');
+
+        // Navigate to password page with company data
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PasswordRegistrationPage(
               companyData: {
-                'companyName': _companyNameController.text,
-                'foundedYear': _foundedYearController.text,
-                'adminName': _adminNameController.text,
-                'email': _emailController.text,
-                'companyType': _companyTypeController.text,
+                'companyName': _companyNameController.text.trim(),
+                'foundedYear': _foundedYearController.text.trim(),
+                'adminName': _adminNameController.text.trim(),
+                'email': _emailController.text.trim(),
+                'companyType': _companyTypeController.text.trim(),
               },
             ),
           ),
         );
       } catch (e) {
+        print('Registration Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(
+            content: Text('Registration error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       setState(() => _isLoading = false);

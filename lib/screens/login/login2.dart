@@ -1,8 +1,10 @@
 import 'package:final_project/screens/login/login.dart';
 import 'package:flutter/material.dart';
 import '../registration/registration4.dart';
-import '../../firebase/company_service.dart';
+import '../../services/company_service.dart';
 import '../company_dashboard.dart';
+import '../../models/company_model.dart';
+import '../../database/database_helper.dart';
 
 class CompanyLoginPage extends StatefulWidget {
   const CompanyLoginPage({super.key});
@@ -17,6 +19,7 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   final CompanyService _companyService = CompanyService();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   bool _isLoading = false;
 
   @override
@@ -101,7 +104,7 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _login,
+                          onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
                             padding: const EdgeInsets.symmetric(vertical: 15),
@@ -110,7 +113,14 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
                             ),
                           ),
                           child: _isLoading
-                              ? const CircularProgressIndicator()
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
                               : const Text(
                                   "Login",
                                   style: TextStyle(
@@ -124,58 +134,6 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
                       const SizedBox(height: 20),
                       Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Don't have an account?",
-                                style: TextStyle(color: Colors.white54),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const CompanyRegistrationPage()),
-                                  );
-                                },
-                                child: const Text(
-                                  "Sign Up",
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Sign In as a Student",
-                                style: TextStyle(color: Colors.white54),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const LoginPage()),
-                                  );
-                                },
-                                child: const Text(
-                                  "Sign Up",
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
@@ -255,35 +213,69 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
     );
   }
 
-  void _login() async {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
+
       try {
-        await _companyService.loginCompany(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
+        print('\n=== Login Process Started ===');
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
+
+        print('Attempting login with:');
+        print('Email: $email');
+
+        // First verify if company exists
+        await _dbHelper.verifyCompanyData(email);
+
+        // Attempt login
+        final company = await _companyService.loginCompany(
+          email: email,
+          password: password,
         );
 
-        // Navigate to company dashboard after successful login
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const CompanyDashboard()),
-            (route) => false,
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString()),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
+        print('Login successful!');
+        print('Company Name: ${company.companyName}');
+        print('Company ID: ${company.id}');
+        print('Company Type: ${company.companyType}');
+
+        if (!mounted) return;
+
+        // Navigate to dashboard with company data
+        await Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CompanyDashboard(
+              company: company,
             ),
-          );
+          ),
+        );
+
+        print('=== Login Process Completed ===\n');
+      } catch (e) {
+        print('Login Process Error: $e');
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
         }
       }
-      setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }
