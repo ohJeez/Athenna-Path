@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../common-functions/job-api.dart';
 import '../models/job-models.dart';
 import '../common-widgets/appbar.dart';
 import '../common-widgets/sidebar.dart';
+import '../services/job_service.dart';
 import 'jobDetail.dart';
 
 class JobListing extends StatefulWidget {
@@ -14,11 +14,12 @@ class JobListing extends StatefulWidget {
 
 class _JobListingState extends State<JobListing> {
   late Future<List<Job>> _jobsFuture;
+  final JobService _jobService = JobService();
 
   @override
   void initState() {
     super.initState();
-    _jobsFuture = JobAPI.fetchJobs();
+    _jobsFuture = _jobService.getJobs();
   }
 
   @override
@@ -45,7 +46,7 @@ class _JobListingState extends State<JobListing> {
                   ElevatedButton(
                     onPressed: () {
                       setState(() {
-                        _jobsFuture = JobAPI.fetchJobs();
+                        _jobsFuture = _jobService.getJobs();
                       });
                     },
                     child: const Text('Retry'),
@@ -69,6 +70,16 @@ class _JobListingState extends State<JobListing> {
                 margin: const EdgeInsets.only(bottom: 16),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF2E3F66),
+                    child: Text(
+                      job.company[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                   title: Text(
                     job.title,
                     style: const TextStyle(
@@ -85,13 +96,28 @@ class _JobListingState extends State<JobListing> {
                         job.company,
                         style: const TextStyle(
                           fontSize: 16,
-                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.blue,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(job.location),
+                      const SizedBox(height: 4),
+                      Text(
+                        job.location,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Posted: ${job.datePosted}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
                       context,

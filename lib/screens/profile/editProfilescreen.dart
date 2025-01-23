@@ -118,7 +118,7 @@ class _EditProfileState extends State<EditProfile> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Profile"),
+        title: const Text("Edit Profile",style: TextStyle(color: Colors.white,fontWeight: FontWeight.w800),),
         backgroundColor: const Color(0xFF2E3F66),
         elevation: 0,
       ),
@@ -219,7 +219,7 @@ class _EditProfileState extends State<EditProfile> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             "Save Profile",
-                            style: TextStyle(fontSize: 16),
+                            style: TextStyle(fontSize: 16,color: Colors.white),
                           ),
                   ),
                 ),
@@ -315,7 +315,7 @@ class _EditProfileState extends State<EditProfile> {
                   });
                   Navigator.pop(context);
                 },
-                child: const Text("Save Project"),
+                child: const Text("Save Project",style: TextStyle(color: Colors.white),),
               ),
             ],
           ),

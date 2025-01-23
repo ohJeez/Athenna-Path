@@ -9,6 +9,10 @@ class Job {
   final String image;
   final String datePosted;
   final String salaryRange;
+  final String requiredSkills;
+  final String experienceLevel;
+  final String qualification;
+  final String deadline;
 
   Job({
     required this.id,
@@ -21,6 +25,10 @@ class Job {
     this.image = '',
     this.datePosted = '',
     this.salaryRange = 'Not specified',
+    this.requiredSkills = '',
+    this.experienceLevel = '',
+    this.qualification = '',
+    this.deadline = '',
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -42,7 +50,31 @@ class Job {
       datePosted: json['datePosted'] ?? '',
       salaryRange: json['salaryRange'] ?? 'Not specified',
       jobProviders: providers,
+      requiredSkills: json['requiredSkills'] ?? '',
+      experienceLevel: json['experienceLevel'] ?? '',
+      qualification: json['qualification'] ?? '',
+      deadline: json['deadline'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'company': company,
+      'description': description,
+      'location': location,
+      'employmentType': employmentType,
+      'image': image,
+      'datePosted': datePosted,
+      'salaryRange': salaryRange,
+      'jobProviders':
+          jobProviders.map((provider) => provider.toJson()).toList(),
+      'requiredSkills': requiredSkills,
+      'experienceLevel': experienceLevel,
+      'qualification': qualification,
+      'deadline': deadline,
+    };
   }
 }
 
@@ -60,5 +92,12 @@ class JobProvider {
       jobProvider: json['jobProvider'] ?? '',
       url: json['url'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'jobProvider': jobProvider,
+      'url': url,
+    };
   }
 }

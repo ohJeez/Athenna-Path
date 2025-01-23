@@ -6,6 +6,8 @@ import '../common-widgets/appbar.dart';
 import '../common-widgets/sidebar.dart';
 import '../models/company_model.dart';
 import '../common-widgets/company_sidebar.dart';
+import '../services/job_service.dart';
+import '../models/job-models.dart';
 
 class CompanyDashboard extends StatefulWidget {
   final Company company;
@@ -184,6 +186,202 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
     );
   }
 
+  void _showAddJobDialog() {
+    final _formKey = GlobalKey<FormState>();
+    String title = '';
+    String description = '';
+    String location = '';
+    String employmentType = '';
+    String salaryRange = '';
+    String requiredSkills = '';
+    String experienceLevel = '';
+    String qualification = '';
+    String deadline = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Add New Job Role',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E3F66),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Job Title*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => title = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Description*',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => description = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Location*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => location = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Employment Type*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => employmentType = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Salary Range',
+                        border: OutlineInputBorder(),
+                      ),
+                      onSaved: (value) => salaryRange = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Required Skills*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => requiredSkills = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Experience Level*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => experienceLevel = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Qualification*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => qualification = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Application Deadline*',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required field' : null,
+                      onSaved: (value) => deadline = value ?? '',
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E3F66),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 50,
+                          vertical: 15,
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (_formKey.currentState?.validate() ?? false) {
+                          _formKey.currentState?.save();
+
+                          final job = Job(
+                            id: DateTime.now()
+                                .millisecondsSinceEpoch
+                                .toString(),
+                            title: title,
+                            company: widget.company.companyName,
+                            description: description,
+                            location: location,
+                            employmentType: employmentType,
+                            jobProviders: [],
+                            datePosted: DateTime.now().toString(),
+                            salaryRange: salaryRange,
+                            requiredSkills: requiredSkills,
+                            experienceLevel: experienceLevel,
+                            qualification: qualification,
+                            deadline: deadline,
+                          );
+
+                          try {
+                            await JobService().addJob(job);
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Job added successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error adding job: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      child: const Text(
+                        'Add Job',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -308,6 +506,15 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                   ),
                 ],
               ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddJobDialog,
+        backgroundColor: const Color(0xFF2E3F66),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Add Job Role',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
     );
   }

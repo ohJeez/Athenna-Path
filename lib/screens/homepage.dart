@@ -218,15 +218,6 @@ class _homeStudentState extends State<homeStudent> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  // Navigate to category-specific course list
-                },
-                child: const Text(
-                  "See All",
-                  style: TextStyle(color: Color(0xFF2E3F66)),
-                ),
-              ),
             ],
           ),
         ),

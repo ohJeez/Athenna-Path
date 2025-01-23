@@ -17,15 +17,16 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'company_database.db');
+    String path = join(await getDatabasesPath(), 'athenna_path.db');
     return await openDatabase(
       path,
-      version: 1,
-      onCreate: _createDb,
+      version: 2,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
-  Future<void> _createDb(Database db, int version) async {
+  Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE companies(
         id TEXT PRIMARY KEY,
@@ -64,6 +65,52 @@ class DatabaseHelper {
         FOREIGN KEY (employeeId) REFERENCES employees (id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE jobs(
+        id TEXT PRIMARY KEY,
+        title TEXT,
+        company TEXT,
+        description TEXT,
+        location TEXT,
+        employmentType TEXT,
+        image TEXT,
+        datePosted TEXT,
+        salaryRange TEXT,
+        requiredSkills TEXT,
+        experienceLevel TEXT,
+        qualification TEXT,
+        deadline TEXT
+      )
+    ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE jobs(
+          id TEXT PRIMARY KEY,
+          title TEXT,
+          company TEXT,
+          description TEXT,
+          location TEXT,
+          employmentType TEXT,
+          image TEXT,
+          datePosted TEXT,
+          salaryRange TEXT,
+          requiredSkills TEXT,
+          experienceLevel TEXT,
+          qualification TEXT,
+          deadline TEXT
+        )
+      ''');
+    }
+  }
+
+  Future<void> deleteDatabase() async {
+    String path = join(await getDatabasesPath(), 'athenna_path.db');
+    await databaseFactory.deleteDatabase(path);
+    _database = null;
   }
 
   // Helper method to check if a company exists
