@@ -218,50 +218,28 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
       setState(() => _isLoading = true);
 
       try {
-        print('\n=== Login Process Started ===');
-        final email = _emailController.text.trim();
+        final email = _emailController.text.trim().toLowerCase();
         final password = _passwordController.text;
 
-        print('Attempting login with:');
-        print('Email: $email');
-
-        // First verify if company exists
-        await _dbHelper.verifyCompanyData(email);
-
-        // Attempt login
         final company = await _companyService.loginCompany(
           email: email,
           password: password,
         );
 
-        print('Login successful!');
-        print('Company Name: ${company.companyName}');
-        print('Company ID: ${company.id}');
-        print('Company Type: ${company.companyType}');
-
         if (!mounted) return;
 
-        // Navigate to dashboard with company data
         await Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => CompanyDashboard(
-              company: company,
-            ),
+            builder: (context) => CompanyDashboard(company: company),
           ),
         );
-
-        print('=== Login Process Completed ===\n');
       } catch (e) {
-        print('Login Process Error: $e');
-
         if (!mounted) return;
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${e.toString()}'),
+            content: Text(e.toString()),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
           ),
         );
       } finally {

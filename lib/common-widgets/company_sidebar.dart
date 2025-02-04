@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/company_dashboard.dart';
 import '../screens/login/login2.dart';
 import '../models/company_model.dart';
+import '../screens/profile/company_profile.dart';
 
 class CompanySidebar extends StatefulWidget {
   final Company company;
@@ -61,14 +62,13 @@ class _CompanySidebarState extends State<CompanySidebar> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.business, color: Color(0xFF2E3F66)),
+            leading: const Icon(Icons.people, color: Color(0xFF2E3F66)),
             title: const Text("Company Profile"),
             onTap: () {
-              // TODO: Navigate to company profile page
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Company Profile - Coming Soon'),
-                  duration: Duration(seconds: 2),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CompanyProfile(company: widget.company),
                 ),
               );
             },

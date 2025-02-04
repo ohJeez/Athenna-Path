@@ -73,7 +73,9 @@ class _JobListingState extends State<JobListing> {
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF2E3F66),
                     child: Text(
-                      job.company[0].toUpperCase(),
+                      job.company.isNotEmpty
+                          ? job.company[0].toUpperCase()
+                          : 'C',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

@@ -329,16 +329,16 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                                 .toString(),
                             title: title,
                             company: widget.company.companyName,
+                            company_id: widget.company.id ?? 0,
                             description: description,
                             location: location,
                             employmentType: employmentType,
-                            jobProviders: [],
-                            datePosted: DateTime.now().toString(),
                             salaryRange: salaryRange,
                             requiredSkills: requiredSkills,
                             experienceLevel: experienceLevel,
                             qualification: qualification,
                             deadline: deadline,
+                            datePosted: DateTime.now().toIso8601String(),
                           );
 
                           try {

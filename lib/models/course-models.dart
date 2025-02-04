@@ -21,8 +21,8 @@ class Course {
         title: json['name']?.toString() ?? 'No Title',
         category: json['category']?.toString() ?? 'No Category',
         description: json['description']?.toString() ?? 'No Description',
-        imageUrl: json['image']?.toString() ??
-            'https://via.placeholder.com/150',
+        imageUrl:
+            json['image']?.toString() ?? 'https://via.placeholder.com/150',
         url: json['url']?.toString() ?? '',
         duration: (json['content_info_short']?.toString() ?? '0 hours')
                 .split(' ')

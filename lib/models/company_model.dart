@@ -1,70 +1,66 @@
 class Company {
-  final String id;
+  final int? id;
   final String companyName;
   final String foundedYear;
-  final String adminName;
   final String email;
   final String companyType;
   final String password;
   final String createdAt;
 
   Company({
-    required this.id,
+    this.id,
     required this.companyName,
     required this.foundedYear,
-    required this.adminName,
     required this.email,
     required this.companyType,
     required this.password,
     required this.createdAt,
   });
 
-  factory Company.fromMap(Map<String, dynamic> map) {
-    return Company(
-      id: map['id'] ?? '',
-      companyName: map['companyName'] ?? '',
-      foundedYear: map['foundedYear'] ?? '',
-      adminName: map['adminName'] ?? '',
-      email: map['email'] ?? '',
-      companyType: map['companyType'] ?? '',
-      password: map['password'] ?? '',
-      createdAt: map['createdAt']?.toString() ?? '',
-    );
-  }
-
-  Map<String, dynamic> toMap() {
+  // Convert Company instance to Map for database operations
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'companyName': companyName,
       'foundedYear': foundedYear,
-      'adminName': adminName,
-      'email': email,
+      'email': email.toLowerCase(),
       'companyType': companyType,
       'password': password,
       'createdAt': createdAt,
     };
   }
 
-  // Add method to create a safe version of the company without sensitive data
+  // Create a safe version of Company without sensitive data
   Company toSafeCompany() {
     return Company(
       id: id,
       companyName: companyName,
       foundedYear: foundedYear,
-      adminName: adminName,
       email: email,
       companyType: companyType,
-      password: '', // Remove password for security
+      password: '', // Remove sensitive data
       createdAt: createdAt,
     );
   }
 
-  // Add method to copy company with modifications
+  // Create Company instance from Map
+  factory Company.fromMap(Map<String, dynamic> map) {
+    return Company(
+      id: map['id'] as int?,
+      companyName: map['companyName'] as String,
+      foundedYear: map['foundedYear'] as String,
+      email: map['email'] as String,
+      companyType: map['companyType'] as String,
+      password: map['password'] as String,
+      createdAt: map['createdAt'] as String,
+    );
+  }
+
+  // Copy with method to create a new instance with some updated fields
   Company copyWith({
-    String? id,
+    int? id,
     String? companyName,
     String? foundedYear,
-    String? adminName,
     String? email,
     String? companyType,
     String? password,
@@ -74,7 +70,6 @@ class Company {
       id: id ?? this.id,
       companyName: companyName ?? this.companyName,
       foundedYear: foundedYear ?? this.foundedYear,
-      adminName: adminName ?? this.adminName,
       email: email ?? this.email,
       companyType: companyType ?? this.companyType,
       password: password ?? this.password,

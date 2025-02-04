@@ -5,7 +5,7 @@ class CourseAPI {
   static const String baseUrl =
       'https://udemy-paid-courses-for-free-api.p.rapidapi.com/rapidapi/courses/search';
   static const String apiKey =
-      '43a4911da6msh017344646daf56bp1f509cjsnad615a48eae9';
+      '4134ade615msh50fac3b16cf47e8p175a2ejsn3839ee9a9f83';
 
   static final Dio _dio = Dio();
 

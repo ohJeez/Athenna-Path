@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CompanyService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final _uuid = const Uuid();
   Company? _currentCompany;
 
   // Hash password
@@ -21,39 +20,46 @@ class CompanyService {
     return digest.toString();
   }
 
-  // Register company (Local DB)
+  // Register company
   Future<void> registerCompany({
     required String email,
     required String password,
     required String companyName,
     required String foundedYear,
-    required String adminName,
     required String companyType,
   }) async {
     try {
-      final exists = await _dbHelper.companyExists(email);
-      if (exists) {
-        throw Exception('A company with this email already exists');
-      }
-
-      final hashedPassword = _hashPassword(password);
       final company = Company(
-        id: _uuid.v4(),
         companyName: companyName,
         foundedYear: foundedYear,
-        adminName: adminName,
         email: email.toLowerCase(),
         companyType: companyType,
-        password: hashedPassword,
+        password: password,
         createdAt: DateTime.now().toIso8601String(),
       );
 
-      print('Registering new company: ${company.companyName}');
-      await _dbHelper.insertCompany(company.toMap());
-      print('Company registered successfully');
+      final db = await _dbHelper.database;
+
+      // Check if email already exists
+      final existingCompany = await db.query(
+        'companies',
+        where: 'email = ?',
+        whereArgs: [email.toLowerCase()],
+      );
+
+      if (existingCompany.isNotEmpty) {
+        throw Exception('Email already registered');
+      }
+
+      final id = await db.insert('companies', company.toJson());
+      print('Company registered with ID: $id');
+
+      // Save company ID to shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('company_id', id.toString());
     } catch (e) {
       print('Registration Error: $e');
-      throw Exception('Registration failed: ${e.toString()}');
+      throw Exception('Registration failed: $e');
     }
   }
 
@@ -63,30 +69,28 @@ class CompanyService {
     required String password,
   }) async {
     try {
-      print('\n=== Login Attempt ===');
-      print('Email: $email');
+      final db = await _dbHelper.database;
+      final results = await db.query(
+        'companies',
+        where: 'email = ? AND password = ?',
+        whereArgs: [email.toLowerCase(), password],
+      );
 
-      final hashedPassword = _hashPassword(password);
-      print('Password hashed successfully');
-
-      final companyData = await _dbHelper.getCompany(email, hashedPassword);
-
-      if (companyData == null) {
-        print('No matching company found in database');
+      if (results.isEmpty) {
         throw Exception('Invalid email or password');
       }
 
-      print('Company found in database');
-      final company = Company.fromMap(companyData);
+      final company = Company.fromMap(results.first);
+      _currentCompany = company;
 
-      // Store the company but remove sensitive data
-      _currentCompany = company.toSafeCompany();
+      // Save company ID to shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('company_id', company.id.toString());
 
-      print('Login successful for: ${company.companyName}');
-      return _currentCompany!;
+      return company;
     } catch (e) {
       print('Login Error: $e');
-      throw Exception('Login failed: ${e.toString()}');
+      throw Exception('Login failed: $e');
     }
   }
 
@@ -125,22 +129,15 @@ class CompanyService {
     return _currentCompany;
   }
 
-  // Set current company
-  Future<void> setCurrentCompany(Company company) async {
-    _currentCompany = company;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('company_id', company.id);
-  }
-
   // Clear current company (for logout)
-  Future<void> logout() async {
+  Future<void> clearCurrentCompany() async {
     _currentCompany = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('company_id');
   }
 
   // Check if current user is a company
-  Future<bool> isCompanyUser(String id) async {
+  Future<bool> isCompanyUser(String uid) async {
     if (_currentCompany != null) {
       return true;
     }
@@ -149,18 +146,18 @@ class CompanyService {
     final result = await db.query(
       'companies',
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [int.parse(uid)],
     );
     return result.isNotEmpty;
   }
 
   // Get company by ID
-  Future<Company> getCompanyById(String id) async {
+  Future<Company> getCompanyById(String uid) async {
     final db = await _dbHelper.database;
     final companies = await db.query(
       'companies',
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [int.parse(uid)],
     );
 
     if (companies.isEmpty) {
@@ -170,7 +167,7 @@ class CompanyService {
     return Company.fromMap(companies.first);
   }
 
-  // Add this method to check login status
+  // Check login status
   Future<bool> isLoggedIn() async {
     if (_currentCompany != null) return true;
 
@@ -187,5 +184,57 @@ class CompanyService {
       }
     }
     return false;
+  }
+
+  // Update company
+  Future<void> updateCompany(Company company) async {
+    try {
+      if (company.id == null) {
+        throw Exception('Cannot update company without ID');
+      }
+
+      final db = await _dbHelper.database;
+      final count = await db.update(
+        'companies',
+        company.toJson(),
+        where: 'id = ?',
+        whereArgs: [company.id],
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      if (count == 0) {
+        throw Exception('Company not found');
+      }
+
+      // Update current company if it's the logged-in company
+      if (_currentCompany?.id == company.id) {
+        _currentCompany = company;
+      }
+
+      print('Company updated successfully: ${company.companyName}');
+    } catch (e) {
+      print('Error updating company: $e');
+      throw Exception('Failed to update company: $e');
+    }
+  }
+
+  // Get company by email
+  Future<Company?> getCompanyByEmail(String email) async {
+    try {
+      final db = await _dbHelper.database;
+      final results = await db.query(
+        'companies',
+        where: 'email = ?',
+        whereArgs: [email.toLowerCase()],
+      );
+
+      if (results.isNotEmpty) {
+        return Company.fromMap(results.first);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting company by email: $e');
+      return null;
+    }
   }
 }

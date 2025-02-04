@@ -23,7 +23,7 @@ void main() async {
 
   // Initialize local database
   final dbHelper = DatabaseHelper();
-  await dbHelper.database;
+  await dbHelper.resetDatabase();
 
   runApp(const MyApp());
 }

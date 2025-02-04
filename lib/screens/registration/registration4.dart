@@ -15,7 +15,6 @@ class _CompanyRegistrationPageState extends State<CompanyRegistrationPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _companyNameController = TextEditingController();
   final TextEditingController _foundedYearController = TextEditingController();
-  final TextEditingController _adminNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _companyTypeController = TextEditingController();
   final CompanyService _companyService = CompanyService();
@@ -38,7 +37,6 @@ class _CompanyRegistrationPageState extends State<CompanyRegistrationPage> {
               companyData: {
                 'companyName': _companyNameController.text.trim(),
                 'foundedYear': _foundedYearController.text.trim(),
-                'adminName': _adminNameController.text.trim(),
                 'email': _emailController.text.trim(),
                 'companyType': _companyTypeController.text.trim(),
               },
@@ -121,22 +119,18 @@ class _CompanyRegistrationPageState extends State<CompanyRegistrationPage> {
                           "Enter the year your company was founded",
                         ),
                         style: const TextStyle(color: Colors.white),
-                        validator: (value) => value == null || value.isEmpty
-                            ? "Please enter the year your company was founded"
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-                      // Admin Name Field
-                      TextFormField(
-                        controller: _adminNameController,
-                        decoration: _buildInputDecoration(
-                          "Admin Name",
-                          "Enter the administrator's name",
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                        validator: (value) => value == null || value.isEmpty
-                            ? "Please enter the administrator's name"
-                            : null,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please enter the year";
+                          }
+                          final year = int.tryParse(value);
+                          if (year == null ||
+                              year < 1800 ||
+                              year > DateTime.now().year) {
+                            return "Please enter a valid year";
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 20),
                       // Email Field

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/job-models.dart';
 import '../common-widgets/appbar.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class JobDetailScreen extends StatelessWidget {
   final Job job;
@@ -17,68 +16,137 @@ class JobDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (job.image.isNotEmpty)
-              Center(
-                child: CachedNetworkImage(
-                  imageUrl: job.image,
-                  height: 100,
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) =>
-                      const CircularProgressIndicator(),
-                  errorWidget: (context, url, error) => const Icon(
-                    Icons.business,
-                    size: 100,
-                  ),
-                ),
+            // Company Icon
+            const Center(
+              child: Icon(
+                Icons.business,
+                size: 100,
+                color: Color(0xFF2E3F66),
               ),
+            ),
             const SizedBox(height: 16),
+            // Job Title
             Text(
               job.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3F66),
+              ),
             ),
             const SizedBox(height: 8),
+            // Company Name
             Text(
               job.company,
               style: const TextStyle(fontSize: 18, color: Colors.grey),
             ),
             const SizedBox(height: 8),
+            // Location
             Row(
               children: [
-                const Icon(Icons.location_on, size: 16),
+                const Icon(Icons.location_on,
+                    size: 16, color: Color(0xFF2E3F66)),
                 const SizedBox(width: 4),
                 Expanded(child: Text(job.location)),
               ],
             ),
             const SizedBox(height: 16),
-            Text(
-              'Employment Type: ${job.employmentType}',
-              style: const TextStyle(fontSize: 16),
+            // Employment Type
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E3F66).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                job.employmentType,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF2E3F66),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            if (job.salaryRange != 'Not specified') ...[
+            // Salary Range
+            if (job.salaryRange.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(
-                'Salary Range: ${job.salaryRange}',
-                style: const TextStyle(fontSize: 16),
-              ),
+              _buildDetailRow('Salary Range', job.salaryRange),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            // Job Details Section
             const Text(
-              'Description:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(job.description),
-            if (job.jobProviders.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  // Add URL launcher functionality
-                },
-                child: const Text('Apply Now'),
+              'Job Details',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3F66),
               ),
-            ],
+            ),
+            const SizedBox(height: 16),
+            _buildDetailRow('Description', job.description),
+            _buildDetailRow('Required Skills', job.requiredSkills),
+            _buildDetailRow('Experience Level', job.experienceLevel),
+            _buildDetailRow('Qualification', job.qualification),
+            _buildDetailRow('Application Deadline', job.deadline),
+            _buildDetailRow('Posted On', job.datePosted),
+            const SizedBox(height: 24),
+            // Apply Button
+            Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E3F66),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: () {
+                  // TODO: Implement application logic
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Application feature coming soon!')),
+                  );
+                },
+                child: const Text(
+                  'Apply Now',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E3F66),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }

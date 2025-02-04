@@ -162,20 +162,13 @@ class _PasswordRegistrationPageState extends State<PasswordRegistrationPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        print('\n=== Completing Registration ===');
-        print('Email: ${widget.companyData['email']}');
-
         await _companyService.registerCompany(
           email: widget.companyData['email']!,
           password: _passwordController.text,
           companyName: widget.companyData['companyName']!,
           foundedYear: widget.companyData['foundedYear']!,
-          adminName: widget.companyData['adminName']!,
           companyType: widget.companyData['companyType']!,
         );
-
-        print('Registration successful!');
-        print('Company Name: ${widget.companyData['companyName']}');
 
         if (!mounted) return;
 
