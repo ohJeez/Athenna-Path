@@ -4,136 +4,100 @@ import '../common-widgets/appbar.dart';
 import '../common-widgets/sidebar.dart';
 import '../services/job_service.dart';
 import 'jobDetail.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobListing extends StatefulWidget {
   const JobListing({Key? key}) : super(key: key);
 
   @override
-  State<JobListing> createState() => _JobListingState();
+  _JobListingState createState() => _JobListingState();
 }
 
 class _JobListingState extends State<JobListing> {
-  late Future<List<Job>> _jobsFuture;
   final JobService _jobService = JobService();
+  List<Job> jobs = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _jobsFuture = _jobService.getJobs();
+    _loadJobs();
+  }
+
+  Future<void> _loadJobs() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('jobs').get();
+      setState(() {
+        jobs = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return Job.fromMap(data);
+        }).toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading jobs: $e');
+      setState(() => isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const MenuSidebar(),
       appBar: const AppBarWidget(),
-      body: FutureBuilder<List<Job>>(
-        future: _jobsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Error: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.red),
+      drawer: const MenuSidebar(),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) {
+                final job = jobs[index];
+                return Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _jobsFuture = _jobService.getJobs();
-                      });
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No jobs found'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final job = snapshot.data![index];
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF2E3F66),
-                    child: Text(
-                      job.company.isNotEmpty
-                          ? job.company[0].toUpperCase()
-                          : 'C',
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    title: Text(
+                      job.title,
                       style: const TextStyle(
-                        color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 18,
                       ),
                     ),
-                  ),
-                  title: Text(
-                    job.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E3F66),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(job.company),
+                        const SizedBox(height: 4),
+                        Text(job.location),
+                        const SizedBox(height: 8),
+                        Text(
+                          job.salaryRange,
+                          style: const TextStyle(
+                            color: Color(0xFF2E3F66),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => JobDetailScreen(job: job),
+                        ),
+                      );
+                    },
                   ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Text(
-                        job.company,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        job.location,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Posted: ${job.datePosted}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => JobDetailScreen(job: job),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            ),
     );
   }
 }

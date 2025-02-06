@@ -1,10 +1,12 @@
-import 'package:final_project/screens/login/login.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../registration/registration4.dart';
 import '../../services/company_service.dart';
 import '../company_dashboard.dart';
 import '../../models/company_model.dart';
-import '../../database/database_helper.dart';
+import '../../services/auth_service.dart';
+import 'login.dart';
 
 class CompanyLoginPage extends StatefulWidget {
   const CompanyLoginPage({super.key});
@@ -18,8 +20,7 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
-  final CompanyService _companyService = CompanyService();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _authService = AuthService();
   bool _isLoading = false;
 
   @override
@@ -152,6 +153,7 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 10),
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
@@ -218,17 +220,35 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
       setState(() => _isLoading = true);
 
       try {
-        final email = _emailController.text.trim().toLowerCase();
-        final password = _passwordController.text;
-
-        final company = await _companyService.loginCompany(
-          email: email,
-          password: password,
+        final userCredential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
+
+        // Check if user is a company
+        final isCompany =
+            await _authService.isCompanyUser(userCredential.user!.uid);
+
+        if (!isCompany) {
+          throw Exception('This account is not registered as a company');
+        }
 
         if (!mounted) return;
 
-        await Navigator.pushReplacement(
+        // Get company data
+        final companyDoc = await FirebaseFirestore.instance
+            .collection('companies')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        final company = Company.fromMap({
+          ...companyDoc.data()!,
+          'id': companyDoc.id,
+        });
+
+        // Navigate to company dashboard
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => CompanyDashboard(company: company),

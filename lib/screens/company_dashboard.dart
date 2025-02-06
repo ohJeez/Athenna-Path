@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/employee_model.dart';
+import '../models/job_application.dart';
 import '../models/student_models.dart';
 import '../services/employee_service.dart';
 import '../common-widgets/appbar.dart';
@@ -8,6 +9,10 @@ import '../models/company_model.dart';
 import '../common-widgets/company_sidebar.dart';
 import '../services/job_service.dart';
 import '../models/job-models.dart';
+import '../services/company_service.dart';
+import '../services/firebase_service.dart';
+import '../screens/jobs/create_job_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CompanyDashboard extends StatefulWidget {
   final Company company;
@@ -23,8 +28,10 @@ class CompanyDashboard extends StatefulWidget {
 
 class _CompanyDashboardState extends State<CompanyDashboard> {
   final EmployeeService _employeeService = EmployeeService();
-  List<Student> employees = [];
+  final JobService _jobService = JobService();
+  List<Job> jobs = [];
   bool isLoading = true;
+  Map<String, List<JobApplication>> _jobApplications = {};
 
   @override
   void initState() {
@@ -32,36 +39,62 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
     print('\n=== Company Dashboard Initialized ===');
     print('Company Name: ${widget.company.companyName}');
     print('Company ID: ${widget.company.id}');
-    _loadEmployees();
+    _loadJobs();
+    _loadJobApplications();
+    _setupApplicationListener();
   }
 
-  Future<void> _loadEmployees() async {
+  Future<void> _loadJobs() async {
     if (!mounted) return;
 
     setState(() => isLoading = true);
     try {
-      print('Loading employees for company: ${widget.company.companyName}');
-      final loadedEmployees = await _employeeService.getEmployees();
+      print('Loading jobs for company: ${widget.company.companyName}');
+      final loadedJobs = await _jobService.getJobsByCompany(widget.company.id);
 
       if (!mounted) return;
 
       setState(() {
-        employees = loadedEmployees;
+        jobs = loadedJobs;
         isLoading = false;
       });
 
-      print('Loaded ${employees.length} employees');
+      print('Loaded ${jobs.length} jobs');
     } catch (e) {
-      print('Error loading employees: $e');
+      print('Error loading jobs: $e');
       if (!mounted) return;
 
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading employees: $e'),
+          content: Text('Error loading jobs: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _loadJobApplications() async {
+    if (!mounted) return;
+
+    try {
+      final applications =
+          await _jobService.getApplicationsByCompany(widget.company.id);
+      final companyJobs = await _jobService.getJobsByCompany(widget.company.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _jobApplications = {};
+        for (var job in companyJobs) {
+          if (job.id != null) {
+            _jobApplications[job.id!] =
+                applications.where((app) => app.jobId == job.id).toList();
+          }
+        }
+      });
+    } catch (e) {
+      print('Error loading applications: $e');
     }
   }
 
@@ -187,199 +220,262 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
   }
 
   void _showAddJobDialog() {
-    final _formKey = GlobalKey<FormState>();
-    String title = '';
-    String description = '';
-    String location = '';
-    String employmentType = '';
-    String salaryRange = '';
-    String requiredSkills = '';
-    String experienceLevel = '';
-    String qualification = '';
-    String deadline = '';
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateJobPage(
+          companyId: widget.company.id,
+          companyName: widget.company.companyName,
+        ),
+      ),
+    );
+  }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+  Widget _buildJobApplicationsSection(Job job) {
+    final applications = _jobApplications[job.id] ?? [];
+
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ExpansionTile(
+        title: Text(
+          job.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Color(0xFF2E3F66),
           ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Add New Job Role',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E3F66),
+        ),
+        subtitle: Text(
+          '${applications.length} applications • ${job.employmentType}',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Job Details Section
+                _buildJobDetailsSection(job),
+                const Divider(height: 32),
+                // Applications Section
+                Text(
+                  'Applications',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                applications.isEmpty
+                    ? const Center(
+                        child: Text('No applications yet'),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: applications.length,
+                        itemBuilder: (context, index) {
+                          return _buildApplicationCard(applications[index]);
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Job Title*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => title = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Description*',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => description = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Location*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => location = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Employment Type*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => employmentType = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Salary Range',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSaved: (value) => salaryRange = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Required Skills*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => requiredSkills = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Experience Level*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => experienceLevel = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Qualification*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => qualification = value ?? '',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Application Deadline*',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Required field' : null,
-                      onSaved: (value) => deadline = value ?? '',
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E3F66),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 50,
-                          vertical: 15,
-                        ),
-                      ),
-                      onPressed: () async {
-                        if (_formKey.currentState?.validate() ?? false) {
-                          _formKey.currentState?.save();
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                          final job = Job(
-                            id: DateTime.now()
-                                .millisecondsSinceEpoch
-                                .toString(),
-                            title: title,
-                            company: widget.company.companyName,
-                            company_id: widget.company.id ?? 0,
-                            description: description,
-                            location: location,
-                            employmentType: employmentType,
-                            salaryRange: salaryRange,
-                            requiredSkills: requiredSkills,
-                            experienceLevel: experienceLevel,
-                            qualification: qualification,
-                            deadline: deadline,
-                            datePosted: DateTime.now().toIso8601String(),
-                          );
+  Widget _buildJobDetailsSection(Job job) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDetailRow(Icons.location_on, job.location),
+        _buildDetailRow(Icons.work, job.experienceLevel),
+        _buildDetailRow(Icons.attach_money, job.salaryRange),
+        _buildDetailRow(Icons.calendar_today, 'Posted: ${job.datePosted}'),
+      ],
+    );
+  }
 
-                          try {
-                            await JobService().addJob(job);
-                            if (mounted) {
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Job added successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error adding job: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        }
-                      },
-                      child: const Text(
-                        'Add Job',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
+  Widget _buildDetailRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplicationCard(JobApplication application) {
+    return FutureBuilder<Student>(
+      future: FirebaseService().getStudentProfile(application.studentId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: ListTile(
+              leading: CircularProgressIndicator(),
+              title: Text('Loading...'),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.hasError) {
+          return const Card(
+            child: ListTile(
+              title: Text('Error loading applicant data'),
+              subtitle: Text('Please try again later'),
+            ),
+          );
+        }
+
+        final student = snapshot.data!;
+        final applicationStatus = application.status.toLowerCase();
+
+        // Safely create initials
+        String initials = '';
+        if (student.firstName.isNotEmpty) {
+          initials += student.firstName[0];
+        }
+        if (student.lastName.isNotEmpty) {
+          initials += student.lastName[0];
+        }
+        if (initials.isEmpty) {
+          initials = '?';
+        }
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4.0),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue[100],
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
               ),
+            ),
+            title: Text(
+              '${student.firstName} ${student.lastName}'.trim(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (student.email.isNotEmpty) Text(student.email),
+                Text(
+                  'Applied: ${_formatDate(application.appliedDate)}',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            trailing: PopupMenuButton<String>(
+              initialValue: applicationStatus,
+              onSelected: (String status) async {
+                try {
+                  await _jobService.updateApplicationStatus(
+                    application.id,
+                    status,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Application status updated to $status'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    _loadJobApplications(); // Reload applications after update
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error updating status: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(applicationStatus),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  applicationStatus.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'pending',
+                  child: Text('Pending'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'accepted',
+                  child: Text('Accept'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'rejected',
+                  child: Text('Reject'),
+                ),
+              ],
             ),
           ),
         );
       },
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  // Add real-time listener for applications
+  void _setupApplicationListener() {
+    FirebaseFirestore.instance
+        .collection('applications')
+        .where('companyId', isEqualTo: widget.company.id)
+        .snapshots()
+        .listen((snapshot) {
+      if (mounted) {
+        _loadJobApplications();
+      }
+    });
   }
 
   @override
@@ -435,26 +531,15 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
         ],
       ),
       drawer: CompanySidebar(company: widget.company),
-      body: RefreshIndicator(
-        onRefresh: _loadEmployees,
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Welcome Message
+                  // Welcome section
                   Container(
                     padding: const EdgeInsets.all(20.0),
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 5,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -462,15 +547,13 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                           'Welcome,',
                           style: TextStyle(
                             fontSize: 24,
-                            fontWeight: FontWeight.bold,
                             color: Colors.grey[800],
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Text(
                           widget.company.companyName,
                           style: const TextStyle(
-                            fontSize: 28,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2E3F66),
                           ),
@@ -478,44 +561,53 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                       ],
                     ),
                   ),
-                  // Employees to Hire Title
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                    width: double.infinity,
-                    child: const Text(
-                      'Employees to Hire',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E3F66),
-                      ),
-                    ),
-                  ),
-                  // Employee List
-                  Expanded(
-                    child: employees.isEmpty
-                        ? const Center(
-                            child: Text('No students found'),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            itemCount: employees.length,
-                            itemBuilder: (context, index) =>
-                                _buildEmployeeCard(employees[index]),
+                  // Jobs section
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Posted Jobs',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E3F66),
                           ),
+                        ),
+                        const SizedBox(height: 16),
+                        ...jobs.map((job) => _buildJobApplicationsSection(job)),
+                      ],
+                    ),
                   ),
                 ],
               ),
-      ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddJobDialog,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateJobPage(
+                companyId: widget.company.id,
+                companyName: widget.company.companyName,
+              ),
+            ),
+          ).then((_) => _loadJobs());
+        },
         backgroundColor: const Color(0xFF2E3F66),
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
-          'Add Job Role',
+          'Add Job',
           style: TextStyle(color: Colors.white),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Clean up any subscriptions if needed
+    super.dispose();
   }
 }

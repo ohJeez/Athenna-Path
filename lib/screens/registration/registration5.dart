@@ -186,9 +186,7 @@ class _PasswordRegistrationPageState extends State<PasswordRegistrationPage> {
           (route) => false,
         );
       } catch (e) {
-        print('Registration Error: $e');
         if (!mounted) return;
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Registration failed: ${e.toString()}'),

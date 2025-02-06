@@ -25,9 +25,20 @@ class _CompanyRegistrationPageState extends State<CompanyRegistrationPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        print('\n=== Starting Company Registration ===');
-        print('Company Name: ${_companyNameController.text}');
-        print('Email: ${_emailController.text}');
+        // Check if email already exists in Firebase
+        final emailExists = await _companyService
+            .checkEmailExists(_emailController.text.trim());
+        if (emailExists) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Email already registered'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
 
         // Navigate to password page with company data
         Navigator.push(
@@ -44,13 +55,14 @@ class _CompanyRegistrationPageState extends State<CompanyRegistrationPage> {
           ),
         );
       } catch (e) {
-        print('Registration Error: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
       setState(() => _isLoading = false);
     }

@@ -1,15 +1,45 @@
+import 'package:final_project/common-widgets/sidebar.dart';
 import 'package:flutter/material.dart';
 import '../models/job-models.dart';
 import '../common-widgets/appbar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/job_service.dart';
 
 class JobDetailScreen extends StatelessWidget {
   final Job job;
+  final JobService _jobService = JobService();
 
-  const JobDetailScreen({Key? key, required this.job}) : super(key: key);
+  JobDetailScreen({Key? key, required this.job}) : super(key: key);
+
+  Future<void> _applyForJob(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to apply')),
+      );
+      return;
+    }
+
+    try {
+      await _jobService.applyForJob(job.id!, user.uid, job.companyId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Application submitted successfully')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to apply: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: MenuSidebar(),
       appBar: const AppBarWidget(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -102,11 +132,7 @@ class JobDetailScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  // TODO: Implement application logic
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Application feature coming soon!')),
-                  );
+                  _applyForJob(context);
                 },
                 child: const Text(
                   'Apply Now',

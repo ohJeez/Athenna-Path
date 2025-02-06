@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/company_model.dart';
 import '../../models/job-models.dart';
-import '../../services/job_service.dart';
+import '../../services/company_service.dart';
 import '../../common-widgets/appbar.dart';
 import '../../common-widgets/company_sidebar.dart';
 import 'edit_company_profile.dart';
@@ -17,217 +17,113 @@ class CompanyProfile extends StatefulWidget {
 }
 
 class _CompanyProfileState extends State<CompanyProfile> {
-  final JobService _jobService = JobService();
+  final CompanyService _companyService = CompanyService();
   late Company company;
-  List<Job> jobs = [];
-  bool isLoading = true;
-  String errorMessage = '';
+  Stream<List<Job>>? _jobsStream;
 
   @override
   void initState() {
     super.initState();
     company = widget.company;
-    fetchJobs();
-  }
-
-  Future<void> fetchJobs() async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = '';
-      });
-
-      final loadedJobs = await _jobService.getJobs();
-      if (mounted) {
-        setState(() {
-          jobs =
-              loadedJobs.where((job) => job.company_id == company.id).toList();
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error fetching jobs: $e');
-      if (mounted) {
-        setState(() {
-          errorMessage = 'Failed to load jobs: ${e.toString()}';
-          isLoading = false;
-        });
-      }
-    }
+    _jobsStream = _companyService.streamCompanyJobs(company.id);
   }
 
   Future<void> _deleteJob(String jobId) async {
     try {
-      await _jobService.deleteJob(jobId);
-      await fetchJobs();
+      await _companyService.deleteJob(jobId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job deleted successfully')),
+          const SnackBar(
+            content: Text('Job deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting job: $e')),
+          SnackBar(
+            content: Text('Error deleting job: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: CompanySidebar(company: company),
-      appBar: const AppBarWidget(),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : errorMessage.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        errorMessage,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: fetchJobs,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: fetchJobs,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Colors.grey[200],
-                            child: Text(
-                              company.companyName[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2E3F66),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildProfileItem('Company Name', company.companyName),
-                        _buildProfileItem('Email', company.email),
-                        _buildProfileItem('Founded Year', company.foundedYear),
-                        _buildProfileItem('Company Type', company.companyType),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Posted Job Roles',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E3F66),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        jobs.isEmpty
-                            ? const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(20.0),
-                                  child: Text(
-                                    'No job roles posted yet',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : Column(
-                                children: jobs
-                                    .map((job) => _buildJobCard(job))
-                                    .toList(),
-                              ),
-                        const SizedBox(height: 30),
-                        Center(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E3F66),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 15,
-                                horizontal: 40,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () async {
-                              final updatedCompany = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => EditCompanyProfile(
-                                    company: company,
-                                  ),
-                                ),
-                              );
-
-                              if (updatedCompany != null) {
-                                setState(() {
-                                  company = updatedCompany;
-                                });
-                              }
-                            },
-                            child: const Text(
-                              'Update Profile',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 16),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-    );
-  }
-
-  Widget _buildProfileItem(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$title: ',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+  void _showDeleteConfirmation(Job job) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Job'),
+        content: Text('Are you sure you want to delete "${job.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : 'Not Provided',
-              style: const TextStyle(fontSize: 16),
-            ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (job.id != null) {
+                _deleteJob(job.id!);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error: Job ID is missing'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
+  Future<void> _editJob(Job job) async {
+    final updatedJob = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditJobPage(job: job),
+      ),
+    );
+
+    if (updatedJob != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Job updated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   Widget _buildJobCard(Job job) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 2,
       child: ExpansionTile(
-        title: Text(job.title,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          job.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E3F66),
+          ),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(job.location ?? 'Location not specified'),
-            Text(job.employmentType ?? 'Employment type not specified',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              job.location ?? 'Location not specified',
+              style: const TextStyle(fontSize: 14),
+            ),
+            Text(
+              job.employmentType ?? 'Employment type not specified',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         ),
         children: [
@@ -252,15 +148,21 @@ class _CompanyProfileState extends State<CompanyProfile> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
+                    TextButton.icon(
                       onPressed: () => _editJob(job),
-                      child: const Text('Edit'),
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF2E3F66),
+                      ),
                     ),
-                    TextButton(
+                    const SizedBox(width: 8),
+                    TextButton.icon(
                       onPressed: () => _showDeleteConfirmation(job),
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
+                      icon: const Icon(Icons.delete, size: 18),
+                      label: const Text('Delete'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
                       ),
                     ),
                   ],
@@ -279,59 +181,174 @@ class _CompanyProfileState extends State<CompanyProfile> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E3F66),
             ),
           ),
           Expanded(
-            child: Text(value.isNotEmpty ? value : 'Not specified'),
+            child: Text(
+              value,
+              style: const TextStyle(height: 1.5),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _editJob(Job job) async {
-    // Navigate to job editing screen and wait for result
-    final updatedJob = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditJobPage(job: job),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      drawer: CompanySidebar(company: company),
+      appBar: const AppBarWidget(),
+      body: StreamBuilder<List<Job>>(
+        stream: _jobsStream,
+        builder: (context, AsyncSnapshot<List<Job>> snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Error: ${snapshot.error}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _jobsStream =
+                            _companyService.streamCompanyJobs(company.id);
+                      });
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final jobs = snapshot.data ?? [];
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[200],
+                    child: Text(
+                      company.companyName[0].toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E3F66),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildProfileItem('Company Name', company.companyName),
+                _buildProfileItem('Email', company.email),
+                _buildProfileItem('Founded Year', company.foundedYear),
+                _buildProfileItem('Company Type', company.companyType),
+                const SizedBox(height: 20),
+                const Text(
+                  'Posted Job Roles',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3F66),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                jobs.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20.0),
+                          child: Text(
+                            'No job roles posted yet',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children:
+                            jobs.map((job) => _buildJobCard(job)).toList(),
+                      ),
+                const SizedBox(height: 30),
+                Center(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E3F66),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                        horizontal: 40,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final updatedCompany = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditCompanyProfile(
+                            company: company,
+                          ),
+                        ),
+                      );
+
+                      if (updatedCompany != null) {
+                        setState(() {
+                          company = updatedCompany;
+                        });
+                      }
+                    },
+                    child: const Text(
+                      'Update Profile',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
-
-    // If job was updated, refresh the jobs list
-    if (updatedJob != null) {
-      await fetchJobs();
-    }
   }
 
-  void _showDeleteConfirmation(Job job) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Delete'),
-          content:
-              const Text('Are you sure you want to delete this job posting?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+  Widget _buildProfileItem(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$title: ',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : 'Not Provided',
+              style: const TextStyle(fontSize: 16),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteJob(job.id);
-              },
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 }

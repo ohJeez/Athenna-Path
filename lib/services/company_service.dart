@@ -1,23 +1,26 @@
-import 'package:sqflite/sqflite.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
-import '../database/database_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/company_model.dart';
 import '../models/employee_model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../models/job-models.dart';
 
 class CompanyService {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   Company? _currentCompany;
 
-  // Hash password
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
+  // Check if email exists
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      final result = await _firestore
+          .collection('companies')
+          .where('email', isEqualTo: email.toLowerCase())
+          .get();
+      return result.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking email: $e');
+      throw Exception('Failed to check email: $e');
+    }
   }
 
   // Register company
@@ -27,74 +30,57 @@ class CompanyService {
     required String companyName,
     required String foundedYear,
     required String companyType,
+    String? adminName,
   }) async {
     try {
-      final company = Company(
-        companyName: companyName,
-        foundedYear: foundedYear,
-        email: email.toLowerCase(),
-        companyType: companyType,
+      // Create auth user
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
         password: password,
-        createdAt: DateTime.now().toIso8601String(),
       );
 
-      final db = await _dbHelper.database;
-
-      // Check if email already exists
-      final existingCompany = await db.query(
-        'companies',
-        where: 'email = ?',
-        whereArgs: [email.toLowerCase()],
-      );
-
-      if (existingCompany.isNotEmpty) {
-        throw Exception('Email already registered');
-      }
-
-      final id = await db.insert('companies', company.toJson());
-      print('Company registered with ID: $id');
-
-      // Save company ID to shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('company_id', id.toString());
+      // Create company document
+      await _firestore
+          .collection('companies')
+          .doc(userCredential.user!.uid)
+          .set({
+        'companyName': companyName,
+        'email': email,
+        'foundedYear': foundedYear,
+        'companyType': companyType,
+        'adminName': adminName,
+        'userType': 'company',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
-      print('Registration Error: $e');
-      throw Exception('Registration failed: $e');
+      throw Exception('Failed to register company: $e');
     }
   }
 
   // Login company
-  Future<Company> loginCompany({
-    required String email,
-    required String password,
-  }) async {
+  Future<Company> loginCompany(String email, String password) async {
     try {
-      final db = await _dbHelper.database;
-      final results = await db.query(
-        'companies',
-        where: 'email = ? AND password = ?',
-        whereArgs: [email.toLowerCase(), password],
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
 
-      if (results.isEmpty) {
-        throw Exception('Invalid email or password');
-      }
+      // Get company data from Firestore
+      final doc = await _firestore
+          .collection('companies')
+          .doc(userCredential.user!.uid)
+          .get();
 
-      final company = Company.fromMap(results.first);
-      _currentCompany = company;
+      if (!doc.exists) throw Exception('Company data not found');
 
-      // Save company ID to shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('company_id', company.id.toString());
-
-      return company;
+      final data = doc.data()!;
+      return Company.fromMap({...data, 'id': doc.id});
     } catch (e) {
-      print('Login Error: $e');
-      throw Exception('Login failed: $e');
+      throw Exception('Failed to login: $e');
     }
   }
 
-  // Get employees (from Firebase)
+  // Get employees
   Future<Map<String, List<Employee>>> getEmployeesByDepartment(
       String companyId) async {
     try {
@@ -125,95 +111,59 @@ class CompanyService {
   }
 
   // Get current company
-  Company? getCurrentCompany() {
-    return _currentCompany;
-  }
+  Company? getCurrentCompany() => _currentCompany;
 
   // Clear current company (for logout)
   Future<void> clearCurrentCompany() async {
     _currentCompany = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('company_id');
+    await _auth.signOut();
   }
 
   // Check if current user is a company
   Future<bool> isCompanyUser(String uid) async {
-    if (_currentCompany != null) {
-      return true;
-    }
-
-    final db = await _dbHelper.database;
-    final result = await db.query(
-      'companies',
-      where: 'id = ?',
-      whereArgs: [int.parse(uid)],
-    );
-    return result.isNotEmpty;
+    final doc = await _firestore.collection('companies').doc(uid).get();
+    return doc.exists;
   }
 
   // Get company by ID
   Future<Company> getCompanyById(String uid) async {
-    final db = await _dbHelper.database;
-    final companies = await db.query(
-      'companies',
-      where: 'id = ?',
-      whereArgs: [int.parse(uid)],
-    );
-
-    if (companies.isEmpty) {
-      throw Exception('Company not found');
+    try {
+      final doc = await _firestore.collection('companies').doc(uid).get();
+      if (!doc.exists) {
+        throw Exception('Company not found');
+      }
+      return Company.fromFirestore(doc.data()!);
+    } catch (e) {
+      throw Exception('Failed to get company: $e');
     }
-
-    return Company.fromMap(companies.first);
   }
 
   // Check login status
   Future<bool> isLoggedIn() async {
-    if (_currentCompany != null) return true;
+    final user = _auth.currentUser;
+    if (user == null) return false;
 
-    final prefs = await SharedPreferences.getInstance();
-    final companyId = prefs.getString('company_id');
-
-    if (companyId != null) {
-      try {
-        final company = await getCompanyById(companyId);
-        _currentCompany = company;
-        return true;
-      } catch (e) {
-        return false;
-      }
+    try {
+      final company = await getCompanyById(user.uid);
+      _currentCompany = company;
+      return true;
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 
   // Update company
   Future<void> updateCompany(Company company) async {
     try {
-      if (company.id == null) {
-        throw Exception('Cannot update company without ID');
-      }
+      await _firestore
+          .collection('companies')
+          .doc(company.id)
+          .update(company.toMap());
 
-      final db = await _dbHelper.database;
-      final count = await db.update(
-        'companies',
-        company.toJson(),
-        where: 'id = ?',
-        whereArgs: [company.id],
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-
-      if (count == 0) {
-        throw Exception('Company not found');
-      }
-
-      // Update current company if it's the logged-in company
       if (_currentCompany?.id == company.id) {
         _currentCompany = company;
       }
-
-      print('Company updated successfully: ${company.companyName}');
     } catch (e) {
-      print('Error updating company: $e');
       throw Exception('Failed to update company: $e');
     }
   }
@@ -221,20 +171,79 @@ class CompanyService {
   // Get company by email
   Future<Company?> getCompanyByEmail(String email) async {
     try {
-      final db = await _dbHelper.database;
-      final results = await db.query(
-        'companies',
-        where: 'email = ?',
-        whereArgs: [email.toLowerCase()],
-      );
+      final snapshot = await _firestore
+          .collection('companies')
+          .where('email', isEqualTo: email.toLowerCase())
+          .get();
 
-      if (results.isNotEmpty) {
-        return Company.fromMap(results.first);
+      if (snapshot.docs.isNotEmpty) {
+        return Company.fromFirestore(snapshot.docs.first.data());
       }
       return null;
     } catch (e) {
       print('Error getting company by email: $e');
       return null;
     }
+  }
+
+  // Add job
+  Future<void> addJob(Job job) async {
+    try {
+      final docRef = await _firestore.collection('jobs').add(job.toMap());
+      print('Job added with ID: ${docRef.id}');
+    } catch (e) {
+      print('Error adding job: $e');
+      throw Exception('Failed to add job: $e');
+    }
+  }
+
+  // Get jobs for company
+  Future<List<Job>> getCompanyJobs(String companyId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('jobs')
+          .where('company_id', isEqualTo: companyId)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // Add document ID to the data
+        return Job.fromMap(data);
+      }).toList();
+    } catch (e) {
+      throw Exception('Failed to get jobs: $e');
+    }
+  }
+
+  // Update job
+  Future<void> updateJob(Job job) async {
+    try {
+      await _firestore.collection('jobs').doc(job.id).update(job.toMap());
+    } catch (e) {
+      throw Exception('Failed to update job: $e');
+    }
+  }
+
+  // Delete job
+  Future<void> deleteJob(String jobId) async {
+    await _firestore.collection('jobs').doc(jobId).delete();
+  }
+
+  // Stream company jobs
+  Stream<List<Job>> streamCompanyJobs(String companyId) {
+    return _firestore
+        .collection('jobs')
+        .where('companyId', isEqualTo: companyId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Job.fromMap({...doc.data(), 'id': doc.id}))
+            .toList());
+  }
+
+  // Get company profile
+  Future<Company> getCompanyProfile(String companyId) async {
+    final doc = await _firestore.collection('companies').doc(companyId).get();
+    if (!doc.exists) throw Exception('Company not found');
+    return Company.fromMap({...doc.data()!, 'id': doc.id});
   }
 }

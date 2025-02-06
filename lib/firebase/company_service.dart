@@ -11,8 +11,8 @@ class CompanyService {
     required String password,
     required String companyName,
     required String foundedYear,
-    required String adminName,
     required String companyType,
+    String? adminName, // Make adminName optional
   }) async {
     try {
       // First check if email already exists
@@ -47,23 +47,7 @@ class CompanyService {
 
       // Send email verification
       await userCredential.user!.sendEmailVerification();
-    } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error: ${e.code} - ${e.message}'); // Debug print
-      switch (e.code) {
-        case 'weak-password':
-          throw Exception('The password provided is too weak.');
-        case 'email-already-in-use':
-          throw Exception('An account already exists for that email.');
-        case 'invalid-email':
-          throw Exception('The email address is not valid.');
-        case 'operation-not-allowed':
-          throw Exception(
-              'Email/password accounts are not enabled. Please contact support.');
-        default:
-          throw Exception('Registration failed: ${e.message}');
-      }
     } catch (e) {
-      print('General Error: $e'); // Debug print
       throw Exception('Failed to register company: $e');
     }
   }

@@ -106,38 +106,7 @@ class _EditJobPageState extends State<EditJobPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
-                onPressed: () async {
-                  if (_formKey.currentState?.validate() ?? false) {
-                    final updatedJob = Job(
-                      id: widget.job.id,
-                      title: titleController.text,
-                      description: descriptionController.text,
-                      location: locationController.text,
-                      company: widget.job.company,
-                      company_id: widget.job.company_id,
-                      salaryRange: salaryRangeController.text,
-                      requiredSkills: requiredSkillsController.text,
-                      experienceLevel: experienceLevelController.text,
-                      qualification: qualificationController.text,
-                      deadline: deadlineController.text,
-                      employmentType: employmentTypeController.text,
-                      datePosted: widget.job.datePosted,
-                    );
-
-                    try {
-                      await _jobService.updateJob(updatedJob);
-                      if (mounted) {
-                        Navigator.pop(context, updatedJob);
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error updating job: $e')),
-                        );
-                      }
-                    }
-                  }
-                },
+                onPressed: _updateJob,
                 child: const Text('Update Job',
                     style: TextStyle(color: Colors.white)),
               ),
@@ -146,6 +115,39 @@ class _EditJobPageState extends State<EditJobPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _updateJob() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final updatedJob = Job(
+        id: widget.job.id,
+        title: titleController.text,
+        description: descriptionController.text,
+        location: locationController.text,
+        company: widget.job.company,
+        companyId: widget.job.companyId,
+        salaryRange: salaryRangeController.text,
+        requiredSkills: requiredSkillsController.text,
+        experienceLevel: experienceLevelController.text,
+        qualification: qualificationController.text,
+        deadline: deadlineController.text,
+        employmentType: employmentTypeController.text,
+        datePosted: widget.job.datePosted,
+      );
+
+      await _jobService.updateJob(updatedJob);
+      if (mounted) {
+        Navigator.pop(context, updatedJob);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating job: $e')),
+        );
+      }
+    }
   }
 
   @override

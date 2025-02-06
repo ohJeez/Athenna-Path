@@ -1,119 +1,106 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/company_dashboard.dart';
+import '../screens/jobs/create_job_page.dart';
 import '../screens/login/login2.dart';
 import '../models/company_model.dart';
 import '../screens/profile/company_profile.dart';
 
-class CompanySidebar extends StatefulWidget {
+class CompanySidebar extends StatelessWidget {
   final Company company;
 
-  const CompanySidebar({
-    Key? key,
-    required this.company,
-  }) : super(key: key);
-
-  @override
-  State<CompanySidebar> createState() => _CompanySidebarState();
-}
-
-class _CompanySidebarState extends State<CompanySidebar> {
-  bool isLoading = false;
-  String error = '';
+  const CompanySidebar({Key? key, required this.company}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: Column(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
-          UserAccountsDrawerHeader(
-            accountName: Text(
-              widget.company.companyName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+          DrawerHeader(
+            decoration: const BoxDecoration(
+              color: Color(0xFF2E3F66),
             ),
-            accountEmail: Text(widget.company.email),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                widget.company.companyName[0].toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3F66),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundImage: AssetImage('assets/images/logo.jpeg'),
                 ),
-              ),
+                const SizedBox(height: 10),
+                Text(
+                  company.companyName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  company.email,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-            decoration: const BoxDecoration(color: Color(0xFF2E3F66)),
           ),
           ListTile(
-            leading: const Icon(Icons.dashboard, color: Color(0xFF2E3F66)),
-            title: const Text("Dashboard"),
+            leading: const Icon(Icons.dashboard),
+            title: const Text('Dashboard'),
             onTap: () {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      CompanyDashboard(company: widget.company),
+                  builder: (context) => CompanyDashboard(company: company),
                 ),
               );
             },
           ),
           ListTile(
-            leading: const Icon(Icons.people, color: Color(0xFF2E3F66)),
-            title: const Text("Company Profile"),
+            leading: const Icon(Icons.business),
+            title: const Text('Company Profile'),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CompanyProfile(company: widget.company),
+                  builder: (context) => CompanyProfile(company: company),
                 ),
               );
             },
           ),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          if (error.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                error,
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
-          const Spacer(),
           ListTile(
-            leading: const Icon(Icons.logout, color: Color(0xFF2E3F66)),
-            title: const Text("Log Out"),
+            leading: const Icon(Icons.work),
+            title: const Text('Post New Job'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateJobPage(
+                    companyId: company.id,
+                    companyName: company.companyName,
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
             onTap: () async {
-              try {
-                await FirebaseAuth.instance.signOut();
-                if (mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const CompanyLoginPage()),
-                    (route) => false,
-                  );
-                }
-              } catch (e) {
-                setState(() {
-                  error = 'Failed to log out';
-                });
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $error')),
-                  );
-                }
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const CompanyLoginPage()),
+                  (route) => false,
+                );
               }
             },
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );

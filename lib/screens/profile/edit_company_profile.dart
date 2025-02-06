@@ -13,6 +13,7 @@ class EditCompanyProfile extends StatefulWidget {
 
 class _EditCompanyProfileState extends State<EditCompanyProfile> {
   final _formKey = GlobalKey<FormState>();
+  final _companyService = CompanyService();
   bool _isSaving = false;
   late TextEditingController companyNameController;
   late TextEditingController emailController;
@@ -40,36 +41,91 @@ class _EditCompanyProfileState extends State<EditCompanyProfile> {
     super.dispose();
   }
 
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    if (!value.contains('@') || !value.contains('.')) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validateFoundedYear(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Founded year is required';
+    }
+    final year = int.tryParse(value);
+    if (year == null) {
+      return 'Please enter a valid year';
+    }
+    final currentYear = DateTime.now().year;
+    if (year < 1800 || year > currentYear) {
+      return 'Please enter a valid year between 1800 and $currentYear';
+    }
+    return null;
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
     try {
+      final newEmail = emailController.text.trim();
+      final currentEmail = widget.company.email;
+
+      // Check if email is being changed
+      if (newEmail != currentEmail) {
+        // Check if new email exists
+        final emailExists = await _companyService.checkEmailExists(newEmail);
+        if (emailExists) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This email is already registered'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+
+      // Create updated company object
       final updatedCompany = Company(
         id: widget.company.id,
-        companyName: companyNameController.text,
-        email: emailController.text,
-        foundedYear: foundedYearController.text,
-        companyType: companyTypeController.text,
-        password: widget.company.password,
-        createdAt: widget.company.createdAt,
+        companyName: companyNameController.text.trim(),
+        email: newEmail,
+        foundedYear: foundedYearController.text.trim(),
+        companyType: companyTypeController.text.trim(),
       );
 
-      await CompanyService().updateCompany(updatedCompany);
+      // Update company profile
+      await _companyService.updateCompany(updatedCompany);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
-        Navigator.pop(context, updatedCompany);
-      }
+      if (!mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Return to previous screen with updated company data
+      Navigator.pop(context, updatedCompany);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
-        );
-      }
+      if (!mounted) return;
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update profile: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -97,8 +153,9 @@ class _EditCompanyProfileState extends State<EditCompanyProfile> {
                   labelText: 'Company Name',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Company name is required' : null,
+                validator: (value) => value?.trim().isEmpty == true
+                    ? 'Company name is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -107,11 +164,8 @@ class _EditCompanyProfileState extends State<EditCompanyProfile> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return 'Email is required';
-                  if (!value!.contains('@')) return 'Invalid email format';
-                  return null;
-                },
+                validator: _validateEmail,
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -120,8 +174,8 @@ class _EditCompanyProfileState extends State<EditCompanyProfile> {
                   labelText: 'Founded Year',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Founded year is required' : null,
+                validator: _validateFoundedYear,
+                keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -130,8 +184,9 @@ class _EditCompanyProfileState extends State<EditCompanyProfile> {
                   labelText: 'Company Type',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Company type is required' : null,
+                validator: (value) => value?.trim().isEmpty == true
+                    ? 'Company type is required'
+                    : null,
               ),
               const SizedBox(height: 32),
               Center(
