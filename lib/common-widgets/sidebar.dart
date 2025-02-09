@@ -1,3 +1,4 @@
+import 'package:final_project/screens/chat_assistant.dart';
 import 'package:final_project/screens/jobListing.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -129,6 +130,16 @@ class _MenuSidebarState extends State<MenuSidebar> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const MockTest()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.work, color: Color(0xFF2E3F66)),
+            title: const Text("Chat Assistant"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChatAssistant()),
               );
             },
           ),

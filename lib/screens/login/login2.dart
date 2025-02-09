@@ -164,7 +164,7 @@ class _CompanyLoginPageState extends State<CompanyLoginPage> {
                               );
                             },
                             child: const Text(
-                              "Login as User",
+                              "Login as Student",
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.blueAccent,

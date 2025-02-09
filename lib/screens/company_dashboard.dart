@@ -49,13 +49,23 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
     setState(() => isLoading = true);
     try {
-      print('Loading jobs for company: ${widget.company.companyName}');
-      final loadedJobs = await _jobService.getJobsByCompany(widget.company.id);
+      print(
+          'Loading jobs for company: ${widget.company.companyName} (ID: ${widget.company.id})');
+
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('jobs')
+          .where('companyId', isEqualTo: widget.company.id)
+          .get();
 
       if (!mounted) return;
 
       setState(() {
-        jobs = loadedJobs;
+        jobs = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id; // Ensure ID is included
+          print('Loaded job: ${data['title']}');
+          return Job.fromMap(data);
+        }).toList();
         isLoading = false;
       });
 
@@ -472,9 +482,26 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
         .where('companyId', isEqualTo: widget.company.id)
         .snapshots()
         .listen((snapshot) {
-      if (mounted) {
-        _loadJobApplications();
-      }
+      if (!mounted) return;
+
+      print('Received application update. Documents: ${snapshot.docs.length}');
+
+      setState(() {
+        _jobApplications = {};
+        for (var doc in snapshot.docs) {
+          final data = doc.data();
+          final application = JobApplication.fromMap(data, doc.id);
+          print('Processing application for job: ${application.jobId}');
+
+          if (_jobApplications.containsKey(application.jobId)) {
+            _jobApplications[application.jobId]!.add(application);
+          } else {
+            _jobApplications[application.jobId] = [application];
+          }
+        }
+      });
+    }, onError: (error) {
+      print('Error in application listener: $error');
     });
   }
 

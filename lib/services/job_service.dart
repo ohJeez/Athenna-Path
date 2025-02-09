@@ -23,7 +23,9 @@ class JobService {
         'date_posted': DateTime.now().toIso8601String(),
         'applications_count': 0,
       });
+      print('Job created successfully');
     } catch (e) {
+      print('Error creating job: $e');
       throw Exception('Failed to create job: $e');
     }
   }
