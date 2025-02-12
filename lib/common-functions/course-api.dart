@@ -1,46 +1,21 @@
 import 'package:dio/dio.dart';
-import 'package:final_project/models/course-models.dart';
+import '../models/course-models.dart';
 
 class CourseAPI {
   static const String baseUrl =
-      'https://udemy-paid-courses-for-free-api.p.rapidapi.com/rapidapi/courses/search';
-  static const String apiKey =
-      '4134ade615msh50fac3b16cf47e8p175a2ejsn3839ee9a9f83';
-
+      'http://10.0.2.2:8000'; // Android emulator localhost
   static final Dio _dio = Dio();
 
   /// Fetches a list of courses.
-  static Future<List<Course>> fetchCourses(
-      {int page = 1, int pageSize = 20}) async {
+  static Future<List<Course>> fetchCourses() async {
     try {
-      final response = await _dio.get(
-        baseUrl,
-        queryParameters: {
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-          'query': 'programming',
-          'language': 'English',
-          'price': 'price-free',
-        },
-        options: Options(
-          headers: {
-            'X-RapidAPI-Key': apiKey,
-            'X-RapidAPI-Host': 'udemy-paid-courses-for-free-api.p.rapidapi.com',
-          },
-        ),
-      );
+      final response = await _dio.get('$baseUrl/courses');
 
       print('API Response Status: ${response.statusCode}');
       print('API Response Data: ${response.data}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> coursesData = response.data['courses'] ?? [];
-        print('Number of courses fetched: ${coursesData.length}');
-
-        if (coursesData.isNotEmpty) {
-          print('Sample course data: ${coursesData[0]}');
-        }
-
+        final List<dynamic> coursesData = response.data;
         return coursesData
             .map((courseData) => Course.fromJson(courseData))
             .toList();
@@ -54,28 +29,18 @@ class CourseAPI {
   }
 
   /// Searches for courses based on a query string.
-  static Future<List<Course>> searchCourses(String query,
-      {int page = 1, int pageSize = 20}) async {
+  static Future<List<Course>> searchCourses(String query) async {
     try {
-      final response = await _dio.get(
-        baseUrl,
-        queryParameters: {
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-          'query': query,
-          'language': 'English',
-          'price': 'price-free',
-        },
-        options: Options(
-          headers: {
-            'X-RapidAPI-Key': apiKey,
-            'X-RapidAPI-Host': 'udemy-paid-courses-for-free-api.p.rapidapi.com',
-          },
-        ),
-      );
+      final response =
+          await _dio.get('$baseUrl/courses/search', queryParameters: {
+        'query': query,
+        'limit': 10,
+      });
+
+      print('Raw API Response: ${response.data}'); // Debug print
 
       if (response.statusCode == 200) {
-        final List<dynamic> coursesData = response.data['courses'] ?? [];
+        final List<dynamic> coursesData = response.data;
         return coursesData
             .map((courseData) => Course.fromJson(courseData))
             .toList();
@@ -83,6 +48,7 @@ class CourseAPI {
         throw Exception('Failed to search courses: ${response.statusCode}');
       }
     } catch (e) {
+      print('Error searching courses: $e');
       throw Exception('Error searching courses: $e');
     }
   }

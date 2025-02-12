@@ -137,8 +137,9 @@ class _EditCompanyProfileState extends State<EditCompanyProfile> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Company Profile'),
+        title: const Text('Edit Company Profile',style: TextStyle(color: Colors.white,fontWeight: FontWeight.w800),),
         backgroundColor: const Color(0xFF2E3F66),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

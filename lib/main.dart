@@ -1,6 +1,6 @@
-import 'package:final_project/screens/homepage.dart';
+import 'package:final_project/screens/home/homepage.dart';
 import 'package:final_project/screens/login/login.dart';
-import 'package:final_project/screens/company_dashboard.dart';
+import 'package:final_project/screens/home/company_dashboard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';

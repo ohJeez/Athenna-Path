@@ -46,8 +46,9 @@ class _EditJobPageState extends State<EditJobPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Job'),
+        title: const Text('Edit Job',style: TextStyle(color: Colors.white,fontWeight: FontWeight.w800),),
         backgroundColor: const Color(0xFF2E3F66),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

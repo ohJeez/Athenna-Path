@@ -142,10 +142,10 @@ class _ChatAssistantState extends State<ChatAssistant> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Career Guidance Assistant'),
+          title: const Text('Career Guidance Assistant',style: TextStyle(color: Colors.white,fontWeight: FontWeight.w800),),
           backgroundColor: const Color(0xFF2E3F66),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back,color: Colors.white,),
             onPressed: () => Navigator.pop(context),
           ),
         ),

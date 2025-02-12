@@ -1,4 +1,4 @@
-import 'package:final_project/screens/homepage.dart';
+import 'package:final_project/screens/home/homepage.dart';
 import 'package:final_project/screens/login/login2.dart';
 import 'package:final_project/screens/registration/registration4.dart';
 import 'package:firebase_auth/firebase_auth.dart';

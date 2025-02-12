@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../registration/registration4.dart';
 import '../../services/company_service.dart';
-import '../company_dashboard.dart';
+import '../home/company_dashboard.dart';
 import '../../models/company_model.dart';
 import '../../services/auth_service.dart';
 import 'login.dart';

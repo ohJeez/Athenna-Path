@@ -1,9 +1,9 @@
 import 'package:final_project/screens/chat_assistant.dart';
-import 'package:final_project/screens/jobListing.dart';
+import 'package:final_project/screens/jobs/jobListing.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:final_project/models/student_models.dart';
-import 'package:final_project/screens/homepage.dart';
+import 'package:final_project/screens/home/homepage.dart';
 import 'package:final_project/screens/profile/studentProfile.dart';
 import 'package:final_project/screens/login/login.dart';
 import 'package:final_project/screens/mockTest.dart';
@@ -134,7 +134,7 @@ class _MenuSidebarState extends State<MenuSidebar> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.work, color: Color(0xFF2E3F66)),
+            leading: const Icon(Icons.chat, color: Color(0xFF2E3F66)),
             title: const Text("Chat Assistant"),
             onTap: () {
               Navigator.push(

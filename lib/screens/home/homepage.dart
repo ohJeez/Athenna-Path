@@ -34,9 +34,14 @@ class _homeStudentState extends State<homeStudent> {
       final fetchedCourses = await CourseAPI.fetchCourses();
       print('Fetched ${fetchedCourses.length} courses');
 
+      // Debug print for categories
+      final categories = fetchedCourses.map((c) => c.category).toSet();
+      print('Available categories: $categories');
+
       // Group courses by category
       final groupedCourses = <String, List<Course>>{};
       for (var course in fetchedCourses) {
+        print('Course: ${course.title}, Category: ${course.category}');
         if (!groupedCourses.containsKey(course.category)) {
           groupedCourses[course.category] = [];
         }

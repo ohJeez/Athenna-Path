@@ -1,9 +1,9 @@
 import 'package:final_project/common-widgets/sidebar.dart';
 import 'package:flutter/material.dart';
-import '../models/job-models.dart';
-import '../common-widgets/appbar.dart';
+import '../../models/job-models.dart';
+import '../../common-widgets/appbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/job_service.dart';
+import '../../services/job_service.dart';
 
 class JobDetailScreen extends StatelessWidget {
   final Job job;

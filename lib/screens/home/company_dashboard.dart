@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import '../models/employee_model.dart';
-import '../models/job_application.dart';
-import '../models/student_models.dart';
-import '../services/employee_service.dart';
-import '../common-widgets/appbar.dart';
-import '../common-widgets/sidebar.dart';
-import '../models/company_model.dart';
-import '../common-widgets/company_sidebar.dart';
-import '../services/job_service.dart';
-import '../models/job-models.dart';
-import '../services/company_service.dart';
-import '../services/firebase_service.dart';
-import '../screens/jobs/create_job_page.dart';
+import '../../models/employee_model.dart';
+import '../../models/job_application.dart';
+import '../../models/student_models.dart';
+import '../../services/employee_service.dart';
+import '../../common-widgets/appbar.dart';
+import '../../common-widgets/sidebar.dart';
+import '../../models/company_model.dart';
+import '../../common-widgets/company_sidebar.dart';
+import '../../services/job_service.dart';
+import '../../models/job-models.dart';
+import '../../services/company_service.dart';
+import '../../services/firebase_service.dart';
+import '../jobs/create_job_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CompanyDashboard extends StatefulWidget {

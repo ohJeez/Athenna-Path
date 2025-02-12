@@ -87,8 +87,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Job'),
+        title: const Text('Create New Job',style: TextStyle(color: Colors.white,fontWeight: FontWeight.w800),),
         backgroundColor: const Color(0xFF2E3F66),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -101,6 +102,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 decoration: const InputDecoration(
                   labelText: 'Job Title',
                   border: OutlineInputBorder(),
+                  fillColor: Colors.indigo,
                 ),
                 validator: (value) =>
                     value?.isEmpty ?? true ? 'Please enter a job title' : null,
@@ -130,7 +132,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator()
-                    : const Text('Create Job'),
+                    : const Text('Create Job',style: TextStyle(color: Colors.white,fontWeight: FontWeight.w500),),
               ),
             ],
           ),

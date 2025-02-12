@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/job-models.dart';
-import '../common-widgets/appbar.dart';
-import '../common-widgets/sidebar.dart';
-import '../services/job_service.dart';
+import '../../models/job-models.dart';
+import '../../common-widgets/appbar.dart';
+import '../../common-widgets/sidebar.dart';
+import '../../services/job_service.dart';
 import 'jobDetail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 

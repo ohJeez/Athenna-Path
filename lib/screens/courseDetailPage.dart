@@ -1,4 +1,5 @@
 import 'package:final_project/common-widgets/appbar.dart';
+import 'package:final_project/common-widgets/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:final_project/models/course-models.dart';
@@ -31,6 +32,7 @@ class CourseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const MenuSidebar(),
       appBar: AppBarWidget(),
       body: SingleChildScrollView(
         child: Column(
